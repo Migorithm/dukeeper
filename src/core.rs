@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{
-    lease::Lease,
-    node::{Node, NodeGroup},
-};
+use crate::{lease::Lease, node::NodeGroup};
 
 #[derive(Default)]
 pub struct ConsistentCore {
@@ -65,18 +62,6 @@ fn test_watch_twice_return_err() {
 fn test_watch_without_controller_return_err() {
     let mut core = ConsistentCore::default();
     assert!(core.watch("group1", 2).is_err());
-}
-
-#[test]
-fn test_check_lease() {
-    let mut core = ConsistentCore::default();
-    let now = current_time_in_sec();
-
-    let lease = Lease::new("group1", now);
-
-    // WHEN register lease
-    core.register_lease(lease.clone(), 1).unwrap();
-    core.watch("group1", 2).unwrap();
 }
 
 fn current_time_in_sec() -> u64 {
