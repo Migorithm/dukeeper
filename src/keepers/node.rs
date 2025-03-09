@@ -1,4 +1,4 @@
-use crate::application_servers::ServerCommand;
+use crate::application_servers::ServerInbox;
 
 #[derive(Debug, Default)]
 pub struct NodeGroup {
@@ -9,7 +9,7 @@ impl NodeGroup {
     pub fn add_controller(
         &mut self,
         node_id: u64,
-        tx: std::sync::mpsc::Sender<ServerCommand>,
+        tx: std::sync::mpsc::Sender<ServerInbox>,
     ) -> Result<(), String> {
         self.nodes.push(Node {
             id: node_id,
@@ -32,7 +32,7 @@ impl NodeGroup {
     pub fn add_watcher(
         &mut self,
         node_id: u64,
-        tx: std::sync::mpsc::Sender<ServerCommand>,
+        tx: std::sync::mpsc::Sender<ServerInbox>,
     ) -> Result<(), String> {
         if self.nodes.iter().find(|n| n.id == node_id).is_some() {
             return Err("Node already exists".to_string());
@@ -51,7 +51,7 @@ impl NodeGroup {
 pub struct Node {
     id: u64,
     role: Role,
-    tx: std::sync::mpsc::Sender<ServerCommand>,
+    tx: std::sync::mpsc::Sender<ServerInbox>,
 }
 
 impl Node {}

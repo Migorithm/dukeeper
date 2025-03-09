@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::application_servers::ServerCommand;
+use crate::application_servers::ServerInbox;
 
 use super::{lease::Lease, node::NodeGroup};
 
@@ -14,7 +14,7 @@ impl ConsistentCore {
         &mut self,
         lease: Lease,
         node_id: u64,
-        tx: std::sync::mpsc::Sender<ServerCommand>,
+        tx: std::sync::mpsc::Sender<ServerInbox>,
     ) -> Result<(), String> {
         let nodes = self.nodes.entry(lease).or_insert(Default::default());
         nodes.add_controller(node_id, tx)?;
@@ -26,11 +26,38 @@ impl ConsistentCore {
         &mut self,
         group_id: &str,
         node_id: u64,
-        tx: std::sync::mpsc::Sender<ServerCommand>,
+        tx: std::sync::mpsc::Sender<ServerInbox>,
     ) -> Result<(), String> {
         let nodes = self.nodes.get_mut(group_id).ok_or("Group not found")?;
         nodes.add_watcher(node_id, tx)?;
         Ok(())
+    }
+
+    pub(crate) fn run(mut self, recv: std::sync::mpsc::Receiver<CoreCommand>) {
+        for cmd in recv {
+            match cmd {
+                CoreCommand::RegisterLease { lease, node_id, tx } => {
+                    if let Err(e) = self.register_lease(lease, node_id, tx.clone()) {
+                        tx.send(ServerInbox::Result(format!("Error: {}", e)))
+                            .unwrap();
+                    } else {
+                        tx.send(ServerInbox::Result("Ok".to_string())).unwrap()
+                    }
+                }
+                CoreCommand::Watch {
+                    group_id,
+                    node_id,
+                    tx,
+                } => {
+                    if let Err(e) = self.watch(&group_id, node_id, tx.clone()) {
+                        tx.send(ServerInbox::Result(format!("Error: {}", e)))
+                            .unwrap();
+                    } else {
+                        tx.send(ServerInbox::Result("Ok".to_string())).unwrap()
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -38,12 +65,12 @@ pub enum CoreCommand {
     RegisterLease {
         lease: Lease,
         node_id: u64,
-        tx: std::sync::mpsc::Sender<ServerCommand>,
+        tx: std::sync::mpsc::Sender<ServerInbox>,
     },
     Watch {
         group_id: String,
         node_id: u64,
-        tx: std::sync::mpsc::Sender<ServerCommand>,
+        tx: std::sync::mpsc::Sender<ServerInbox>,
     },
 }
 
