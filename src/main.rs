@@ -1,7 +1,3 @@
-pub mod core;
-pub mod lease;
-pub mod node;
+pub mod keepers;
 
-fn main() {
-    println!("Hello, world!");
-}
+fn main() {}

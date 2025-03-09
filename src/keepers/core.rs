@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{lease::Lease, node::NodeGroup};
+use super::{lease::Lease, node::NodeGroup};
 
 #[derive(Default)]
 pub struct ConsistentCore {
