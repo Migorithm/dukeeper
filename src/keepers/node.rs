@@ -54,7 +54,7 @@ impl NodeGroup {
     pub(crate) fn expire_controller(&mut self) {
         self.nodes.retain(|n| n.role == Role::Follower);
         for node in self.nodes.iter_mut() {
-            node.tx.send(ServerInbox::ControllerOut).unwrap();
+            node.tx.send(ServerInbox::ControllerExpired).unwrap();
         }
     }
 }

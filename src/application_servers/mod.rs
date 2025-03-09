@@ -50,7 +50,7 @@ impl Server {
 
         while let Ok(message) = self.recv.recv() {
             match message {
-                ServerInbox::ControllerOut => {
+                ServerInbox::ControllerExpired => {
                     logger.log("Controller is gone");
                     self.tx
                         .send(CoreCommand::RegisterLease {
@@ -64,12 +64,10 @@ impl Server {
             }
         }
     }
-
-    pub(crate) fn stop(self) {}
 }
 
 pub enum ServerInbox {
-    ControllerOut,
+    ControllerExpired,
     Result(String),
 }
 
