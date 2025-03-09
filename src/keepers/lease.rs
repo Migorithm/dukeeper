@@ -2,8 +2,8 @@ use std::borrow::Borrow;
 
 #[derive(Clone)]
 pub struct Lease {
-    group_id: String,
-    ttl: u64,
+    pub(crate) group_id: String,
+    pub(crate) ttl: u64,
 }
 
 impl Lease {

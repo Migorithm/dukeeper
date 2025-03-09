@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use crate::keepers::core::CoreCommand;
+use crate::keepers::{core::CoreCommand, lease::Lease};
 
 pub struct Server {
     id: u64,
@@ -22,6 +22,7 @@ impl Server {
         }
     }
 
+    // TODO haven't implemented yet
     pub fn register_lease(&self, group_id: &str, ttl: u64) -> String {
         let lease = crate::keepers::lease::Lease::new(group_id, ttl);
         self.tx
@@ -49,7 +50,16 @@ impl Server {
 
         while let Ok(message) = self.recv.recv() {
             match message {
-                ServerInbox::ControllerOut => todo!(),
+                ServerInbox::ControllerOut => {
+                    logger.log("Controller is gone");
+                    self.tx
+                        .send(CoreCommand::RegisterLease {
+                            lease: Lease::new(group_id, 300),
+                            node_id: self.id,
+                            tx: self.self_tx.clone(),
+                        })
+                        .unwrap();
+                }
                 ServerInbox::Result(s) => logger.log(&s),
             }
         }

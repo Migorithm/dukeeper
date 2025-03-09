@@ -11,11 +11,15 @@ impl NodeGroup {
         node_id: u64,
         tx: std::sync::mpsc::Sender<ServerInbox>,
     ) -> Result<(), String> {
-        self.nodes.push(Node {
-            id: node_id,
-            role: Role::Controller,
-            tx,
-        });
+        if let Some(node) = self.nodes.iter_mut().find(|n| n.id == node_id) {
+            node.role = Role::Controller;
+        } else {
+            self.nodes.push(Node {
+                id: node_id,
+                role: Role::Controller,
+                tx,
+            })
+        };
 
         if self
             .nodes
@@ -26,6 +30,7 @@ impl NodeGroup {
         {
             return Err("Controller already exists".to_string());
         }
+
         Ok(())
     }
 
@@ -44,6 +49,13 @@ impl NodeGroup {
         });
 
         Ok(())
+    }
+
+    pub(crate) fn expire_controller(&mut self) {
+        self.nodes.retain(|n| n.role == Role::Follower);
+        for node in self.nodes.iter_mut() {
+            node.tx.send(ServerInbox::ControllerOut).unwrap();
+        }
     }
 }
 
