@@ -1,43 +1,50 @@
-use std::borrow::Borrow;
-
-#[derive(Clone)]
-pub struct Lease {
-    group_id: String,
-    ttl: u64,
+#[derive(Debug, Default)]
+pub struct NodeGroup {
+    nodes: Vec<Node>,
 }
 
-impl Lease {
-    pub fn new(group_id: &str, ttl: u64) -> Self {
-        Lease {
-            group_id: group_id.into(),
-            ttl,
+impl NodeGroup {
+    pub fn add_controller(&mut self, node_id: u64) -> Result<(), String> {
+        self.nodes.push(Node {
+            id: node_id,
+            role: Role::Controller,
+        });
+
+        if self
+            .nodes
+            .iter()
+            .filter(|n| n.role == Role::Controller)
+            .count()
+            > 1
+        {
+            return Err("Controller already exists".to_string());
         }
+        Ok(())
+    }
+
+    pub fn add_watcher(&mut self, node_id: u64) -> Result<(), String> {
+        if self.nodes.iter().find(|n| n.id == node_id).is_some() {
+            return Err("Node already exists".to_string());
+        }
+        self.nodes.push(Node {
+            id: node_id,
+            role: Role::Follower,
+        });
+
+        Ok(())
     }
 }
 
-impl PartialEq for Lease {
-    fn eq(&self, other: &Self) -> bool {
-        self.group_id == other.group_id
-    }
+#[derive(Debug)]
+pub struct Node {
+    id: u64,
+    role: Role,
 }
 
-impl PartialEq<str> for Lease {
-    fn eq(&self, other: &str) -> bool {
-        self.group_id == other
-    }
-}
+impl Node {}
 
-impl Borrow<str> for Lease {
-    fn borrow(&self) -> &str {
-        &self.group_id
-    }
-}
-
-// Required to use Lease in a HashMap
-impl Eq for Lease {}
-
-impl std::hash::Hash for Lease {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.group_id.hash(state);
-    }
+#[derive(Debug, PartialEq)]
+pub enum Role {
+    Controller,
+    Follower,
 }

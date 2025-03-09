@@ -1,77 +1,53 @@
 use std::collections::HashMap;
 
-use crate::node::Lease;
+use crate::{
+    lease::Lease,
+    node::{Node, NodeGroup},
+};
 
 #[derive(Default)]
 pub struct ConsistentCore {
-    nodes: HashMap<Lease, Vec<Node>>,
+    nodes: HashMap<Lease, NodeGroup>,
 }
 
 impl ConsistentCore {
     pub(crate) fn register_lease(&mut self, lease: Lease, node_id: u64) -> Result<(), String> {
-        let nodes = self.nodes.entry(lease).or_insert(vec![]);
+        let nodes = self.nodes.entry(lease).or_insert(Default::default());
+        nodes.add_controller(node_id)?;
 
-        nodes.push(Node {
-            id: node_id,
-            role: Role::Controller,
-        });
-
-        if nodes.iter().filter(|n| n.role == Role::Controller).count() > 1 {
-            return Err("Controller already exists".to_string());
-        }
         Ok(())
     }
 
     pub(crate) fn watch(&mut self, group_id: &str, node_id: u64) -> Result<(), String> {
         let nodes = self.nodes.get_mut(group_id).ok_or("Group not found")?;
-
-        if nodes.iter().find(|n| n.id == node_id).is_some() {
-            return Err("Node already exists".to_string());
-        }
-
-        nodes.push(Node {
-            id: node_id,
-            role: Role::Follower,
-        });
+        nodes.add_watcher(node_id)?;
         Ok(())
     }
-}
-
-#[derive(Debug)]
-pub struct Node {
-    id: u64,
-    role: Role,
-}
-
-#[derive(Debug, PartialEq)]
-enum Role {
-    Controller,
-    Follower,
 }
 
 #[test]
 fn test_register_lease() {
     let mut core = ConsistentCore::default();
 
-    let group_id = Lease::new("group1", 300);
-    assert!(core.register_lease(group_id, 1).is_ok());
+    let lease = Lease::new("group1", 300);
+    assert!(core.register_lease(lease, 1).is_ok());
 }
 
 #[test]
 fn test_register_lease_twice_return_err() {
     let mut core = ConsistentCore::default();
 
-    let group_id = Lease::new("group1", 300);
-    assert!(core.register_lease(group_id.clone(), 1).is_ok());
-    assert!(core.register_lease(group_id.clone(), 2).is_err());
+    let lease = Lease::new("group1", 300);
+    assert!(core.register_lease(lease.clone(), 1).is_ok());
+    assert!(core.register_lease(lease.clone(), 2).is_err());
 }
 
 #[test]
 fn test_watch() {
     let mut core = ConsistentCore::default();
 
-    let group_id = Lease::new("group1", 300);
-    assert!(core.register_lease(group_id.clone(), 1).is_ok());
+    let lease = Lease::new("group1", 300);
+    assert!(core.register_lease(lease.clone(), 1).is_ok());
     assert!(core.watch("group1", 2).is_ok());
 }
 
@@ -79,8 +55,8 @@ fn test_watch() {
 fn test_watch_twice_return_err() {
     let mut core = ConsistentCore::default();
 
-    let group_id = Lease::new("group1", 300);
-    assert!(core.register_lease(group_id.clone(), 1).is_ok());
+    let lease = Lease::new("group1", 300);
+    assert!(core.register_lease(lease.clone(), 1).is_ok());
     assert!(core.watch("group1", 2).is_ok());
     assert!(core.watch("group1", 2).is_err());
 }
@@ -89,4 +65,26 @@ fn test_watch_twice_return_err() {
 fn test_watch_without_controller_return_err() {
     let mut core = ConsistentCore::default();
     assert!(core.watch("group1", 2).is_err());
+}
+
+#[test]
+fn test_check_lease() {
+    let mut core = ConsistentCore::default();
+    let now = current_time_in_sec();
+
+    let lease = Lease::new("group1", now);
+
+    // WHEN register lease
+    core.register_lease(lease.clone(), 1).unwrap();
+    core.watch("group1", 2).unwrap();
+}
+
+fn current_time_in_sec() -> u64 {
+    let sys_now = std::time::SystemTime::now();
+
+    // convert sys_now to u64
+    sys_now
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
 }
