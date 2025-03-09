@@ -1,13 +1,20 @@
+use crate::application_servers::ServerCommand;
+
 #[derive(Debug, Default)]
 pub struct NodeGroup {
     nodes: Vec<Node>,
 }
 
 impl NodeGroup {
-    pub fn add_controller(&mut self, node_id: u64) -> Result<(), String> {
+    pub fn add_controller(
+        &mut self,
+        node_id: u64,
+        tx: std::sync::mpsc::Sender<ServerCommand>,
+    ) -> Result<(), String> {
         self.nodes.push(Node {
             id: node_id,
             role: Role::Controller,
+            tx,
         });
 
         if self
@@ -22,13 +29,18 @@ impl NodeGroup {
         Ok(())
     }
 
-    pub fn add_watcher(&mut self, node_id: u64) -> Result<(), String> {
+    pub fn add_watcher(
+        &mut self,
+        node_id: u64,
+        tx: std::sync::mpsc::Sender<ServerCommand>,
+    ) -> Result<(), String> {
         if self.nodes.iter().find(|n| n.id == node_id).is_some() {
             return Err("Node already exists".to_string());
         }
         self.nodes.push(Node {
             id: node_id,
             role: Role::Follower,
+            tx,
         });
 
         Ok(())
@@ -39,6 +51,7 @@ impl NodeGroup {
 pub struct Node {
     id: u64,
     role: Role,
+    tx: std::sync::mpsc::Sender<ServerCommand>,
 }
 
 impl Node {}
