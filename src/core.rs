@@ -6,7 +6,7 @@ pub struct ConsistentCore {
 }
 
 impl ConsistentCore {
-    pub(crate) fn register(&mut self, group_id: GroupId, mut node_id: u64, ttl: u64) {
+    pub(crate) fn register(&mut self, group_id: GroupId, node_id: u64, ttl: u64) {
         let nodes = self.nodes.entry(group_id).or_insert(vec![]);
 
         nodes.push(Node {
