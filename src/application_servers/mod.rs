@@ -1,5 +1,7 @@
 // simulate a servers
 
+use std::sync::{Arc, Mutex};
+
 use crate::keepers::core::CoreCommand;
 
 pub struct Server {
@@ -36,7 +38,7 @@ impl Server {
         s
     }
 
-    pub fn watch(&self, group_id: &str) -> String {
+    pub fn watch(self, group_id: &str, logger: impl TLogger) {
         self.tx
             .send(CoreCommand::Watch {
                 group_id: group_id.into(),
@@ -45,14 +47,28 @@ impl Server {
             })
             .unwrap();
 
-        let ServerInbox::Result(s) = self.recv.recv().unwrap() else {
-            panic!()
-        };
-        s
+        while let Ok(message) = self.recv.recv() {
+            match message {
+                ServerInbox::ControllerOut => todo!(),
+                ServerInbox::Result(s) => logger.log(&s),
+            }
+        }
     }
+
+    pub(crate) fn stop(self) {}
 }
 
 pub enum ServerInbox {
     ControllerOut,
     Result(String),
+}
+
+pub trait TLogger {
+    fn log(&self, msg: &str);
+}
+
+impl TLogger for Arc<Mutex<Vec<String>>> {
+    fn log(&self, msg: &str) {
+        self.lock().unwrap().push(msg.into());
+    }
 }
